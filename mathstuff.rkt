@@ -1,0 +1,178 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname mathstuff) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+;; Data Definitions ------------------------------------------------------------
+
+;; A Set is one of:
+;; -- '()
+;; -- (cons X Set)
+;; Interpretation: represents a mathematical set of items. Any two Sets which
+;; contain the same elements are considered to be equal. Additionally,
+;; every a in a Set A must be unique. No repeated elements are allowed.
+
+;; Functions -------------------------------------------------------------------
+
+;; Set Set -> Set
+;; Computes the union of A and B.
+
+(check-expect (set=? (union '(1 3 4) '(1 2 3)) '(1 2 3 4)) #true)
+(check-expect (set=? (union '(1 2 3) '()) '(1 2 3)) #true)
+
+(define (union A B)
+  (append A (set/ B A)))
+
+;; Set Set -> Set
+;; Constructs the intersection of A and B. 
+
+(check-expect (int '(1 2 3) '(1 2)) '(1 2))
+(check-expect (int '(1 4 5) '(3 4)) '(4))
+(check-expect (int '(1 2 3) '(4 5 6)) '())
+(check-expect (int '(1 2) '(0 1 2)) '(1 2))
+
+(define (int A B)
+  (cond
+    [(empty? A) '()]
+    [else (append (filter (λ (e) (equal? (first A) e)) B)
+                  (int (rest A) B))]))
+
+;; Set Set -> Set
+;; Removes elements in B from A. Set subtraction
+
+(check-expect (set/ '(1 2 3) '(2)) '(1 3))
+(check-expect (set/ '(2 3 4) '(1)) '(2 3 4))
+(check-expect (set/ '(1 2 3 4) '(1 3)) '(2 4))
+
+(define (set/ A B)
+  (local (;; Number -> Boolean
+          ;; is e a member of set B?
+          ;; If B = '(1 2 3)
+          ;; Given 4 Expect: #f
+          ;; Given 2 Expect: #t
+          (define (in-B? e)
+            (member? e B)))
+    (filter (λ (e) (not (in-B? e))) A)))
+
+;; Set Set -> Set
+;; Finds the symmetric difference of A and B
+
+(check-expect (set△ '(1 2 3) '(2 3 4)) '(1 4))
+(check-expect (set△ '(1 2 3) '(3 2 1)) '())
+
+(define (set△ A B)
+  (set/ (union A B) (int A B)))
+
+;; Set Set -> Set
+;; Computes the Cartesian product AxB
+
+(check-expect (setx '(1 2 3) '(1 2)) (list (list 1 1) (list 1 2) (list 2 1)
+                                           (list 2 2) (list 3 1) (list 3 2)))
+(check-expect (setx '(1) '(1 2)) (list (list 1 1) (list 1 2)))
+(check-expect (setx '() '()) '())
+
+(define (setx A B)
+  (local (;; X=X, Y=Set
+          ;; X Set -> Set
+          ;; Creates a set of ordered pairs (a,b) where b is every element in B
+          ;; If B = '(1 2)
+          ;; Given: 1 Expect: '((1 1) (1 2))
+          ;; Given: 2 Expect: '((2 1) (2 2))
+          (define (over-a a)
+            (map (λ (b) (list a b)) B)))
+    (foldr (λ (a aB) (append (over-a a) aB)) '() A)))
+
+;; [X -> Y] Set Set -> Boolean
+;; Is f:A->B a surjective function?
+
+(check-expect (surjection? add1 '(1 2 3) '(2 3 4)) #true)
+(check-expect (surjection? add1 '(1 2 3) '(1 2 3)) #false)
+(check-expect (surjection? sub1 '(1 2 3) '(0 1 2)) #true)
+(check-expect (surjection? sub1 '(1 2) '(0 1 2)) #false)
+
+(define (surjection? f A B)
+  (local ((define f-A (map f A))
+          (define f-codomain (rm-duplicates f-A)))
+    (set=? f-codomain B)))
+
+;; [X -> Y] Set Set -> Boolean
+;; Is f:A->B an injective function?
+;; Wrong
+
+(check-expect (injection? add1 '(1 2 3) '(2 3 4)) #true)
+(check-expect (injection? add1 '(1 2 3) '(3 4)) #false)
+(check-expect (injection? sub1 '(2 3) '(0 1 2)) #true)
+
+(define (injection? f A B)
+  (local ((define f-A (map f A))
+          (define f-codomain (rm-duplicates f-A))
+          (define f-is-subset? (subset? f-codomain B))
+          (define f-cd-size=A? (= (length A) (length f-codomain))))
+    (and f-cd-size=A? f-is-subset?)))
+
+;; [X -> Y] Set Set -> Boolean
+;; Is f:A->B a bijective function?
+
+(check-expect (bijection? add1 '(1 2 3) '(2 3 4)) #true)
+(check-expect (bijection? add1 '(1 2 3) '(3 4)) #false)
+(check-expect (bijection? sub1 '(2 3) '(0 1 2)) #false)
+
+(define (bijection? f A B)
+  (and (surjection? f A B) (injection? f A B)))
+
+;; Set Set -> Boolean?
+;; Are sets A and B equal?
+
+(check-expect (set=? '(1 2 3) '(3 2 1)) #true)
+(check-expect (set=? '(3 4 2) '(1 3 4)) #false)
+(check-expect (set=? '(1 2) '(0 1 2)) #false)
+
+(define (set=? A B)
+  (and (subset? A B) (subset? B A)))
+
+;; Set Set -> Boolean
+;; Is A a subset of B?
+
+(check-expect (subset? '(1 2 3) '(2 3 4 5)) #false)
+(check-expect (subset? '(1 2 3) '(1 2 3)) #true)
+(check-expect (subset? '() '(1 2 3)) #true)
+
+(define (subset? A B)
+  (andmap (λ (a) (member? a B)) A))
+
+;; [Listof X] -> Boolean
+;; Are all items of lox unique?
+
+(check-expect (unique*? '(1 2 3)) #true)
+(check-expect (unique*? '(1 2 2)) #false)
+
+(define (unique*? lox)
+  (cond
+    [(empty? lox) #true]
+    [else (local ((define x (first lox))
+                  (define rest-x (rest lox))
+                  (define not-member? (λ (x) (not (member? x rest-x)))))
+            (and (not-member? x) (unique*? (rest lox))))]))
+
+;; [Listof X] -> Set
+;; Removes equal members of a list to make a set
+
+(check-expect (rm-duplicates '(1 2 2 3)) '(1 2 3))
+(check-expect (rm-duplicates '(1 2 3)) '(1 2 3))
+(check-expect (rm-duplicates '()) '())
+
+(define (rm-duplicates lox0)
+  (local (;; [Listof X] -> Set
+          ;; Removes equal members of lox
+          ;; ACCUMULATOR: seen is the members seen between lox0 and lox
+          ;; Given: '(1 2 3) '() Expect: '(1 2 3)
+          ;; Given: '(1 2 2 3) '() Expect: '(1 2 3)
+          ;; Given: '(2 3) '(1 2) Expect: '(1 2 3)
+          (define (rm-duplicates/a lox seen)
+            (cond
+              [(empty? lox) '()]
+              [else (local ((define x (first lox))
+                            (define rest-x (rest lox)))
+                      (if (member? x seen)
+                          (rm-duplicates/a (rest lox) seen)
+                          (cons x (rm-duplicates/a rest-x (cons x seen)))))])))
+    (rm-duplicates/a lox0 '())))
+
