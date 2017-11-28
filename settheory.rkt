@@ -1,6 +1,6 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
-#reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname mathstuff) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
+#reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname settheory) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 ;; Data Definitions ------------------------------------------------------------
 
 ;; A Set is one of:
@@ -9,6 +9,8 @@
 ;; Interpretation: represents a mathematical set of items. Any two Sets which
 ;; contain the same elements are considered to be equal. Additionally,
 ;; every a in a Set A must be unique. No repeated elements are allowed.
+
+;; A Sequence is a List
 
 ;; Functions -------------------------------------------------------------------
 
@@ -62,11 +64,12 @@
   (set/ (union A B) (int A B)))
 
 ;; Set Set -> Set
-;; Computes the Cartesian product AxB
+;; Computes the Cartesian product AxB, returning a set of Sequences of length 2
 
 (check-expect (setx '(1 2 3) '(1 2)) (list (list 1 1) (list 1 2) (list 2 1)
                                            (list 2 2) (list 3 1) (list 3 2)))
 (check-expect (setx '(1) '(1 2)) (list (list 1 1) (list 1 2)))
+(check-expect (setx '(1) '(3 2)) (list (list 1 3) (list 1 2)))
 (check-expect (setx '() '()) '())
 
 (define (setx A B)
@@ -95,7 +98,6 @@
 
 ;; [X -> Y] Set Set -> Boolean
 ;; Is f:A->B an injective function?
-;; Wrong
 
 (check-expect (injection? add1 '(1 2 3) '(2 3 4)) #true)
 (check-expect (injection? add1 '(1 2 3) '(3 4)) #false)
@@ -112,6 +114,7 @@
 ;; Is f:A->B a bijective function?
 
 (check-expect (bijection? add1 '(1 2 3) '(2 3 4)) #true)
+(check-expect (bijection? add1 '(1 2 3) '(3 4 5)) #false)
 (check-expect (bijection? add1 '(1 2 3) '(3 4)) #false)
 (check-expect (bijection? sub1 '(2 3) '(0 1 2)) #false)
 
@@ -124,6 +127,8 @@
 (check-expect (set=? '(1 2 3) '(3 2 1)) #true)
 (check-expect (set=? '(3 4 2) '(1 3 4)) #false)
 (check-expect (set=? '(1 2) '(0 1 2)) #false)
+(check-expect (set=? '() '(0 1 2)) #false)
+(check-expect (set=? '() '()) #true)
 
 (define (set=? A B)
   (and (subset? A B) (subset? B A)))
@@ -132,6 +137,7 @@
 ;; Is A a subset of B?
 
 (check-expect (subset? '(1 2 3) '(2 3 4 5)) #false)
+(check-expect (subset? '(1 2 3) '(1 2 3 4 5)) #true)
 (check-expect (subset? '(1 2 3) '(1 2 3)) #true)
 (check-expect (subset? '() '(1 2 3)) #true)
 
